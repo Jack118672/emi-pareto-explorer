@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Patient MLDE Pareto Explorer">
+  <rect width="512" height="512" rx="96" fill="#147877"/>
+  <path d="M120 354c58-10 83-70 126-92 46-24 83 3 146-70" fill="none" stroke="#ffffff" stroke-width="34" stroke-linecap="round"/>
+  <circle cx="122" cy="354" r="28" fill="#d49319"/>
+  <circle cx="246" cy="262" r="28" fill="#ffffff"/>
+  <circle cx="392" cy="192" r="28" fill="#c2415b"/>
+  <path d="M142 116h88m-44-44v88M292 344h92M338 298v92" stroke="#ffffff" stroke-width="28" stroke-linecap="round"/>
+</svg>

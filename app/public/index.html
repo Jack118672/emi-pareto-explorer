@@ -3,31 +3,140 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>EMI Pareto Explorer</title>
+    <meta name="theme-color" content="#147877">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="MLDE Pareto">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Patient MLDE Pareto Explorer</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <header class="topbar">
       <div>
-        <h1>EMI Pareto Explorer</h1>
-        <p>Tessier Lab binding datasets</p>
+        <h1>Patient MLDE Pareto Explorer</h1>
+        <p>Variant ranking for antibody, AAV, and CRISPR design</p>
       </div>
-      <div class="status" id="status">Loading</div>
+      <div class="topbar-actions">
+        <span class="mode-pill">MLDE</span>
+        <span class="mode-pill warm">Patient context</span>
+        <div class="status" id="status">Loading</div>
+      </div>
     </header>
 
     <main class="layout">
       <aside class="sidebar">
-        <section class="panel">
-          <h2>Dataset</h2>
+        <section class="panel install-card accent-orange" id="installCard">
+          <div class="section-title">
+            <span class="step-dot phone-dot">↓</span>
+            <h2>Phone App</h2>
+          </div>
+          <p id="installHelp">Open the live site on your phone, then install it to your home screen.</p>
+          <button id="installApp" type="button">Install App</button>
+          <div class="install-steps" id="installSteps">
+            <strong>iPhone</strong>
+            <span>Safari → Share → Add to Home Screen</span>
+            <strong>Android</strong>
+            <span>Chrome → Install app or Add to Home screen</span>
+          </div>
+        </section>
+
+        <section class="panel step-panel accent-teal">
+          <div class="section-title">
+            <span class="step-dot">1</span>
+            <h2>Dataset</h2>
+          </div>
           <div class="segmented" id="datasetTabs"></div>
         </section>
 
-        <section class="panel">
-          <h2>Target pI</h2>
+        <section class="panel step-panel accent-gold">
+          <div class="section-title">
+            <span class="step-dot">2</span>
+            <h2>Target pI</h2>
+          </div>
           <label class="slider-row">
             <span id="piValue">8.50</span>
             <input id="piSlider" type="range" min="6.5" max="10.5" step="0.05" value="8.5">
           </label>
+        </section>
+
+        <section class="panel step-panel accent-rose">
+          <div class="section-title">
+            <span class="step-dot">3</span>
+            <h2>Patient Context</h2>
+          </div>
+          <div class="field-stack">
+            <input id="patientId" type="text" placeholder="De-identified patient ID">
+            <input id="disease" type="text" placeholder="Disease or cohort">
+            <input id="mutation" type="text" placeholder="Mutation / variant">
+            <input id="targetAntigen" type="text" placeholder="Target antigen or tissue">
+          </div>
+        </section>
+
+        <section class="panel step-panel accent-blue">
+          <div class="section-title">
+            <span class="step-dot">4</span>
+            <h2>Score Weights</h2>
+          </div>
+          <label class="weight-row">
+            <span>Target</span>
+            <input id="targetWeight" type="range" min="0" max="1" step="0.05" value="0.42">
+          </label>
+          <label class="weight-row">
+            <span>Specificity</span>
+            <input id="specificityWeight" type="range" min="0" max="1" step="0.05" value="0.32">
+          </label>
+          <label class="weight-row">
+            <span>pI</span>
+            <input id="piWeight" type="range" min="0" max="1" step="0.05" value="0.14">
+          </label>
+          <label class="weight-row">
+            <span>Patient</span>
+            <input id="patientWeight" type="range" min="0" max="1" step="0.05" value="0.12">
+          </label>
+        </section>
+
+        <section class="panel step-panel accent-green">
+          <div class="section-title">
+            <span class="step-dot">5</span>
+            <h2>Import Data</h2>
+          </div>
+          <label class="file-drop">
+            <input id="customFile" type="file" accept=".csv,.tsv,.txt">
+            <span>CSV/TSV with sequence, binding, off-target, and pI columns</span>
+          </label>
+          <div class="import-actions">
+            <a href="examples/custom_variant_template.csv" download>Variant template</a>
+            <a href="examples/patient_context_template.csv" download>Patient template</a>
+          </div>
+        </section>
+
+        <section class="panel output-card" id="importReport">
+          <div class="section-title slim">
+            <span class="mini-dot green"></span>
+            <h2>Input Check</h2>
+          </div>
+          <p class="muted">Built-in dataset loaded. Import a file to see column mapping and dropped-row checks.</p>
+        </section>
+
+        <section class="panel step-panel accent-purple">
+          <div class="section-title">
+            <span class="step-dot">6</span>
+            <h2>Live Variant</h2>
+          </div>
+          <div class="field-stack">
+            <input id="liveSample" type="text" placeholder="Variant name">
+            <input id="liveSequence" type="text" placeholder="Amino-acid sequence">
+            <div class="triple">
+              <input id="liveAnt" type="number" step="0.01" placeholder="Target">
+              <input id="liveOva" type="number" step="0.01" placeholder="Off-target">
+              <input id="livePi" type="number" step="0.01" placeholder="pI">
+            </div>
+            <button id="addLiveVariant" type="button">Add Variant</button>
+          </div>
         </section>
 
         <section class="panel metrics" id="metrics"></section>
@@ -39,15 +148,21 @@
       </aside>
 
       <section class="workspace">
+        <section class="insight-grid">
+          <div class="output-card" id="dataProfile"></div>
+          <div class="output-card" id="rankExplanation"></div>
+        </section>
+
         <div class="plot-shell">
           <div class="plot-head">
             <div>
               <h2>Binding Landscape</h2>
-              <p id="plotSubtitle">OVA Binding vs ANT Binding</p>
+              <p id="plotSubtitle">Off-target binding vs target binding</p>
             </div>
             <div class="legend">
               <span><i class="dot pareto"></i>Pareto</span>
               <span><i class="dot ranked"></i>Ranked</span>
+              <span><i class="dot selected"></i>Selected</span>
             </div>
           </div>
           <canvas id="plot" width="980" height="560"></canvas>
@@ -56,7 +171,10 @@
         <div class="table-shell">
           <div class="table-tools">
             <h2>Candidate Ranking</h2>
-            <input id="search" type="search" placeholder="Search sample or sequence">
+            <div class="table-actions">
+              <input id="search" type="search" placeholder="Search sample, sequence, patient, mutation">
+              <button id="exportRanked" type="button">Export CSV</button>
+            </div>
           </div>
           <div class="table-wrap">
             <table>
@@ -64,9 +182,10 @@
                 <tr>
                   <th>Rank</th>
                   <th>Sample</th>
-                  <th>ANT</th>
-                  <th>OVA</th>
+                  <th>Target</th>
+                  <th>Off-target</th>
                   <th>pI</th>
+                  <th>Patient</th>
                   <th>Score</th>
                   <th>Front</th>
                 </tr>
@@ -79,5 +198,10 @@
     </main>
 
     <script src="app.js"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => navigator.serviceWorker.register("service-worker.js"));
+      }
+    </script>
   </body>
 </html>

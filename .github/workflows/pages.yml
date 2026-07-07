@@ -28,9 +28,7 @@ jobs:
       - name: Build static site
         run: |
           mkdir -p _site
-          cp app/public/index.html _site/
-          cp app/public/app.js _site/
-          cp app/public/styles.css _site/
+          cp -r app/public/* _site/
           cp emi_binding.csv _site/
           cp iso_binding.csv _site/
           cp igg_binding.csv _site/

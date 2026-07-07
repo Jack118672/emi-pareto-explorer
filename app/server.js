@@ -243,6 +243,8 @@ function sendFile(res, filePath) {
     ".css": "text/css; charset=utf-8",
     ".js": "text/javascript; charset=utf-8",
     ".json": "application/json; charset=utf-8",
+    ".csv": "text/csv; charset=utf-8",
+    ".png": "image/png",
     ".svg": "image/svg+xml"
   }[ext] || "application/octet-stream";
 
@@ -280,6 +282,12 @@ function handleRequest(req, res) {
     if (url.pathname.startsWith("/api/dataset/")) {
       const id = url.pathname.split("/").pop();
       sendJson(res, datasetResponse(id, url.searchParams));
+      return;
+    }
+
+    const datasetFile = Object.values(DATASETS).find((dataset) => `/${dataset.file}` === url.pathname);
+    if (datasetFile) {
+      sendFile(res, path.join(ROOT, datasetFile.file));
       return;
     }
 

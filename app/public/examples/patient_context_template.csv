@@ -1,0 +1,4 @@
+patient_id,disease,mutation,target_antigen,tissue,target_pi,notes
+P001,lung cancer,MET exon 14 skipping,HGFR / c-Met,lung,8.50,Use de-identified or synthetic data only
+P002,glioblastoma,EGFRvIII,EGFR,brain,8.20,Can guide the patient context fields in the app
+P003,hemophilia B,F9 pathogenic variant,AAV liver tropism,liver,8.70,Useful for AAV capsid/gene delivery examples
