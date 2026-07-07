@@ -1,0 +1,17 @@
+{
+  "name": "emi-pareto-opt-ml-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local browser app for exploring Tessier Lab EMI Pareto optimization datasets.",
+  "scripts": {
+    "start": "node app/server.js",
+    "check": "node --check app/server.js && node --check app/public/app.js"
+  },
+  "keywords": [
+    "pareto",
+    "protein-engineering",
+    "computational-biology",
+    "antibody"
+  ],
+  "license": "MIT"
+}

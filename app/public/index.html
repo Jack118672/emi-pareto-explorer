@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EMI Pareto Explorer</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>EMI Pareto Explorer</h1>
+        <p>Tessier Lab binding datasets</p>
+      </div>
+      <div class="status" id="status">Loading</div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <section class="panel">
+          <h2>Dataset</h2>
+          <div class="segmented" id="datasetTabs"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Target pI</h2>
+          <label class="slider-row">
+            <span id="piValue">8.50</span>
+            <input id="piSlider" type="range" min="6.5" max="10.5" step="0.05" value="8.5">
+          </label>
+        </section>
+
+        <section class="panel metrics" id="metrics"></section>
+
+        <section class="panel detail" id="detail">
+          <h2>Selected Variant</h2>
+          <p class="muted">Select a point or row.</p>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <div class="plot-shell">
+          <div class="plot-head">
+            <div>
+              <h2>Binding Landscape</h2>
+              <p id="plotSubtitle">OVA Binding vs ANT Binding</p>
+            </div>
+            <div class="legend">
+              <span><i class="dot pareto"></i>Pareto</span>
+              <span><i class="dot ranked"></i>Ranked</span>
+            </div>
+          </div>
+          <canvas id="plot" width="980" height="560"></canvas>
+        </div>
+
+        <div class="table-shell">
+          <div class="table-tools">
+            <h2>Candidate Ranking</h2>
+            <input id="search" type="search" placeholder="Search sample or sequence">
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Sample</th>
+                  <th>ANT</th>
+                  <th>OVA</th>
+                  <th>pI</th>
+                  <th>Score</th>
+                  <th>Front</th>
+                </tr>
+              </thead>
+              <tbody id="rankingBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
