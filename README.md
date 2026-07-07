@@ -2,6 +2,10 @@
 
 This repository contains the Tessier Lab `Emi_Pareto_Opt_ML` research code plus a lightweight local browser app for exploring the binding datasets.
 
+## Live app
+
+https://jack118672.github.io/emi-pareto-explorer/
+
 ## Run the app
 
 ```bash

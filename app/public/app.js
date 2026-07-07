@@ -7,6 +7,29 @@ const state = {
   search: ""
 };
 
+const DATASET_CONFIGS = {
+  emi: {
+    id: "emi",
+    label: "EMI library",
+    file: "emi_binding.csv",
+    description: "Training library with binary ANT and OVA binding labels."
+  },
+  iso: {
+    id: "iso",
+    label: "Isolated variants",
+    file: "iso_binding.csv",
+    description: "Out-of-library isolated sequences with continuous binding values."
+  },
+  igg: {
+    id: "igg",
+    label: "IgG variants",
+    file: "igg_binding.csv",
+    description: "IgG-format sequences with continuous binding values."
+  }
+};
+
+const staticCache = new Map();
+
 const els = {
   status: document.querySelector("#status"),
   datasetTabs: document.querySelector("#datasetTabs"),
@@ -42,7 +65,7 @@ async function fetchJson(url) {
 
 async function init() {
   try {
-    const { datasets } = await fetchJson("/api/datasets");
+    const { datasets } = await loadDatasets();
     state.datasets = datasets;
     renderTabs();
     wireEvents();
@@ -50,6 +73,24 @@ async function init() {
   } catch (error) {
     els.status.textContent = "Error";
     els.detail.innerHTML = `<h2>Load Error</h2><p class="muted">${error.message}</p>`;
+  }
+}
+
+async function loadDatasets() {
+  try {
+    return await fetchJson("/api/datasets");
+  } catch (error) {
+    const datasets = await Promise.all(Object.keys(DATASET_CONFIGS).map(async (id) => {
+      const data = await loadStaticDataset(id);
+      return {
+        id: data.id,
+        label: data.label,
+        description: data.description,
+        file: data.file,
+        summary: data.summary
+      };
+    }));
+    return { datasets };
   }
 }
 
@@ -90,8 +131,13 @@ function renderTabs() {
 
 async function loadDataset() {
   els.status.textContent = "Loading";
-  const url = `/api/dataset/${state.activeDataset}?targetPi=${state.targetPi.toFixed(2)}&limit=10000`;
-  const data = await fetchJson(url);
+  let data;
+  try {
+    const url = `/api/dataset/${state.activeDataset}?targetPi=${state.targetPi.toFixed(2)}&limit=10000`;
+    data = await fetchJson(url);
+  } catch (error) {
+    data = await staticDatasetResponse(state.activeDataset, state.targetPi, 10000);
+  }
   state.rows = data.rows;
   state.summary = data.summary;
   state.label = data.label;
@@ -102,6 +148,187 @@ async function loadDataset() {
   renderDetail();
   renderTable();
   drawPlot();
+}
+
+async function loadStaticDataset(id) {
+  if (staticCache.has(id)) return staticCache.get(id);
+  const config = DATASET_CONFIGS[id];
+  if (!config) throw new Error(`Unknown dataset: ${id}`);
+
+  const response = await fetch(config.file);
+  if (!response.ok) throw new Error(`Could not load ${config.file}`);
+
+  const parsed = parseCsv(await response.text());
+  const headers = parsed.shift().map((header) => header.trim());
+  const rows = parsed.map((values, index) => {
+    const record = {};
+    headers.forEach((header, headerIndex) => {
+      record[header] = values[headerIndex];
+    });
+
+    return {
+      id: `${id}-${index + 1}`,
+      index: index + 1,
+      sample: record.Sample || `Variant ${index + 1}`,
+      sequence: record["VH Sequence"] || "",
+      ant: toNumber(record["ANT Binding"]),
+      ova: toNumber(record["OVA Binding"]),
+      pI: toNumber(record.pI_seq),
+      dataset: id
+    };
+  }).filter((row) => row.sequence && row.ant !== null && row.ova !== null && row.pI !== null);
+
+  const data = {
+    ...config,
+    rows,
+    summary: summarize(rows)
+  };
+  staticCache.set(id, data);
+  return data;
+}
+
+async function staticDatasetResponse(id, targetPi, limit) {
+  const data = await loadStaticDataset(id);
+  const rows = scoreRows(data.rows, targetPi);
+  return {
+    id: data.id,
+    label: data.label,
+    description: data.description,
+    file: data.file,
+    summary: {
+      ...data.summary,
+      paretoCount: rows.filter((row) => row.pareto).length,
+      targetPi
+    },
+    rows: rows.slice(0, limit)
+  };
+}
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    const next = text[i + 1];
+
+    if (ch === '"' && inQuotes && next === '"') {
+      cell += '"';
+      i += 1;
+    } else if (ch === '"') {
+      inQuotes = !inQuotes;
+    } else if (ch === "," && !inQuotes) {
+      row.push(cell);
+      cell = "";
+    } else if ((ch === "\n" || ch === "\r") && !inQuotes) {
+      if (ch === "\r" && next === "\n") i += 1;
+      row.push(cell);
+      if (row.some((value) => value !== "")) rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += ch;
+    }
+  }
+
+  if (cell.length > 0 || row.length > 0) {
+    row.push(cell);
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+function toNumber(value) {
+  const parsed = Number(String(value ?? "").trim());
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function summarize(rows) {
+  const antValues = rows.map((row) => row.ant);
+  const ovaValues = rows.map((row) => row.ova);
+  const pIValues = rows.map((row) => row.pI);
+
+  return {
+    count: rows.length,
+    ant: describe(antValues),
+    ova: describe(ovaValues),
+    pI: describe(pIValues),
+    specificCount: rows.filter((row) => row.ant > row.ova).length
+  };
+}
+
+function describe(values) {
+  const sorted = values.slice().sort((a, b) => a - b);
+  const sum = values.reduce((total, value) => total + value, 0);
+  return {
+    min: sorted[0],
+    max: sorted[sorted.length - 1],
+    mean: sum / sorted.length,
+    median: quantile(sorted, 0.5)
+  };
+}
+
+function quantile(sorted, q) {
+  if (!sorted.length) return null;
+  const pos = (sorted.length - 1) * q;
+  const base = Math.floor(pos);
+  const rest = pos - base;
+  if (sorted[base + 1] !== undefined) {
+    return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+  }
+  return sorted[base];
+}
+
+function scoreRows(rows, targetPi) {
+  const ant = describe(rows.map((row) => row.ant));
+  const ova = describe(rows.map((row) => row.ova));
+  const pIDistanceMax = Math.max(...rows.map((row) => Math.abs(row.pI - targetPi))) || 1;
+
+  const scored = rows.map((row) => {
+    const antigen = normalize(row.ant, ant.min, ant.max);
+    const offTarget = 1 - normalize(row.ova, ova.min, ova.max);
+    const pIMatch = 1 - Math.min(Math.abs(row.pI - targetPi) / pIDistanceMax, 1);
+    const specificity = row.ant - row.ova;
+    const score = (0.48 * antigen) + (0.37 * offTarget) + (0.15 * pIMatch);
+
+    return {
+      ...row,
+      score,
+      specificity,
+      objectives: [antigen, offTarget, pIMatch]
+    };
+  });
+
+  markPareto(scored);
+  return scored.sort((a, b) => {
+    if (b.pareto !== a.pareto) return Number(b.pareto) - Number(a.pareto);
+    return b.score - a.score;
+  });
+}
+
+function markPareto(rows) {
+  for (let i = 0; i < rows.length; i += 1) {
+    let dominated = false;
+    for (let j = 0; j < rows.length; j += 1) {
+      if (i !== j && dominates(rows[j], rows[i])) {
+        dominated = true;
+        break;
+      }
+    }
+    rows[i].pareto = !dominated;
+  }
+}
+
+function dominates(a, b) {
+  let better = false;
+  for (let i = 0; i < a.objectives.length; i += 1) {
+    if (a.objectives[i] < b.objectives[i]) return false;
+    if (a.objectives[i] > b.objectives[i]) better = true;
+  }
+  return better;
 }
 
 function renderMetrics() {
